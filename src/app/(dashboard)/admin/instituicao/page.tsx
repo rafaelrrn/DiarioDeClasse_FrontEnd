@@ -1,93 +1,165 @@
 'use client';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { toast } from 'sonner';
-import { criarInstituicao } from '@/features/instituicao/instituicaoService';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PageHeader } from '@/shared/components/PageHeader';
+import { InstituicaoTabContent } from './InstituicaoTabContent';
+import { NomeTabContent } from './NomeTabContent';
+import { CursoTabContent } from './CursoTabContent';
 import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
+  useEnsinos,
+  useCriarEnsino,
+  useAtualizarEnsino,
+  useDeletarEnsino,
+  useGraus,
+  useCriarGrau,
+  useAtualizarGrau,
+  useDeletarGrau,
+  useSeries,
+  useCriarSerie,
+  useAtualizarSerie,
+  useDeletarSerie,
+  useTurnos,
+  useCriarTurno,
+  useAtualizarTurno,
+  useDeletarTurno,
+} from '@/features/instituicao/instituicaoQueries';
 
-const schema = z.object({
-  nome: z.string().min(1, 'Nome é obrigatório'),
-  endereco: z.string().optional(),
-  telefone: z.string().optional(),
-});
+// ─── Wrappers para os recursos com campos "nome" ──────────────────────────────
 
-type FormData = z.infer<typeof schema>;
+function EnsinoTab() {
+  const query = useEnsinos();
+  const criar = useCriarEnsino();
+  const atualizar = useAtualizarEnsino();
+  const deletar = useDeletarEnsino();
 
-export default function AdminInstituicaoPage() {
-  const form = useForm<FormData>({ resolver: zodResolver(schema) });
-
-  async function onSubmit(data: FormData) {
-    try {
-      await criarInstituicao(data);
-      toast.success('Instituição cadastrada com sucesso');
-      form.reset();
-    } catch (error: any) {
-      toast.error(error.response?.data?.error ?? 'Erro ao cadastrar');
-    }
-  }
+  const items = (query.data ?? []).map((e) => ({ id: e.idEnsino!, nome: e.nome }));
 
   return (
+    <NomeTabContent
+      label="Ensino"
+      items={items}
+      isLoading={query.isLoading}
+      isError={query.isError}
+      isMutating={criar.isPending || atualizar.isPending || deletar.isPending}
+      onRefetch={() => query.refetch()}
+      onCriar={(nome, onSuccess) => criar.mutate({ nome }, { onSuccess })}
+      onAtualizar={(id, nome, onSuccess) =>
+        atualizar.mutate({ id, dto: { nome } }, { onSuccess })
+      }
+      onDeletar={(id, onSuccess) => deletar.mutate(id, { onSuccess })}
+    />
+  );
+}
+
+function GrauTab() {
+  const query = useGraus();
+  const criar = useCriarGrau();
+  const atualizar = useAtualizarGrau();
+  const deletar = useDeletarGrau();
+
+  const items = (query.data ?? []).map((g) => ({ id: g.idGrau!, nome: g.nome }));
+
+  return (
+    <NomeTabContent
+      label="Grau"
+      items={items}
+      isLoading={query.isLoading}
+      isError={query.isError}
+      isMutating={criar.isPending || atualizar.isPending || deletar.isPending}
+      onRefetch={() => query.refetch()}
+      onCriar={(nome, onSuccess) => criar.mutate({ nome }, { onSuccess })}
+      onAtualizar={(id, nome, onSuccess) =>
+        atualizar.mutate({ id, dto: { nome } }, { onSuccess })
+      }
+      onDeletar={(id, onSuccess) => deletar.mutate(id, { onSuccess })}
+    />
+  );
+}
+
+function SerieTab() {
+  const query = useSeries();
+  const criar = useCriarSerie();
+  const atualizar = useAtualizarSerie();
+  const deletar = useDeletarSerie();
+
+  const items = (query.data ?? []).map((s) => ({ id: s.idSerie!, nome: s.nome }));
+
+  return (
+    <NomeTabContent
+      label="Série"
+      items={items}
+      isLoading={query.isLoading}
+      isError={query.isError}
+      isMutating={criar.isPending || atualizar.isPending || deletar.isPending}
+      onRefetch={() => query.refetch()}
+      onCriar={(nome, onSuccess) => criar.mutate({ nome }, { onSuccess })}
+      onAtualizar={(id, nome, onSuccess) =>
+        atualizar.mutate({ id, dto: { nome } }, { onSuccess })
+      }
+      onDeletar={(id, onSuccess) => deletar.mutate(id, { onSuccess })}
+    />
+  );
+}
+
+function TurnoTab() {
+  const query = useTurnos();
+  const criar = useCriarTurno();
+  const atualizar = useAtualizarTurno();
+  const deletar = useDeletarTurno();
+
+  const items = (query.data ?? []).map((t) => ({ id: t.idTurno!, nome: t.nome }));
+
+  return (
+    <NomeTabContent
+      label="Turno"
+      items={items}
+      isLoading={query.isLoading}
+      isError={query.isError}
+      isMutating={criar.isPending || atualizar.isPending || deletar.isPending}
+      onRefetch={() => query.refetch()}
+      onCriar={(nome, onSuccess) => criar.mutate({ nome }, { onSuccess })}
+      onAtualizar={(id, nome, onSuccess) =>
+        atualizar.mutate({ id, dto: { nome } }, { onSuccess })
+      }
+      onDeletar={(id, onSuccess) => deletar.mutate(id, { onSuccess })}
+    />
+  );
+}
+
+// ─── Página principal ─────────────────────────────────────────────────────────
+
+export default function AdminInstituicaoPage() {
+  return (
     <div>
-      <PageHeader title="Instituição de Ensino" />
-      <div className="max-w-md">
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="nome"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nome</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Nome da instituição" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="endereco"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Endereço</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Endereço" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="telefone"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Telefone</FormLabel>
-                  <FormControl>
-                    <Input placeholder="(12) 3456-7890" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <Button type="submit" disabled={form.formState.isSubmitting}>
-              Salvar
-            </Button>
-          </form>
-        </Form>
-      </div>
+      <PageHeader title="Configurações da Instituição" />
+      <Tabs defaultValue="instituicao">
+        <TabsList className="mb-4 flex-wrap h-auto">
+          <TabsTrigger value="instituicao">Instituição</TabsTrigger>
+          <TabsTrigger value="ensino">Ensino</TabsTrigger>
+          <TabsTrigger value="grau">Grau</TabsTrigger>
+          <TabsTrigger value="serie">Série</TabsTrigger>
+          <TabsTrigger value="turno">Turno</TabsTrigger>
+          <TabsTrigger value="curso">Curso</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="instituicao">
+          <InstituicaoTabContent />
+        </TabsContent>
+        <TabsContent value="ensino">
+          <EnsinoTab />
+        </TabsContent>
+        <TabsContent value="grau">
+          <GrauTab />
+        </TabsContent>
+        <TabsContent value="serie">
+          <SerieTab />
+        </TabsContent>
+        <TabsContent value="turno">
+          <TurnoTab />
+        </TabsContent>
+        <TabsContent value="curso">
+          <CursoTabContent />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
