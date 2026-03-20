@@ -67,7 +67,7 @@ export function LancarFrequenciaForm({ idTurma }: { idTurma: number }) {
           <SelectContent>
             {calendarios.map((c) => (
               <SelectItem key={c.idCalendarioEscolar} value={String(c.idCalendarioEscolar)}>
-                {c.data} {c.descricao ? `— ${c.descricao}` : ''}
+                Calendário #{c.idCalendarioEscolar}
               </SelectItem>
             ))}
           </SelectContent>

@@ -26,6 +26,7 @@ const navItems: NavItem[] = [
   { label: 'Instituição', href: '/admin/instituicao', roles: ['ADMINISTRADOR', 'COORDENADOR'] },
   { label: 'Config. Turma', href: '/admin/turma', roles: ['ADMINISTRADOR'] },
   { label: 'Config. Pessoa', href: '/admin/pessoa', roles: ['ADMINISTRADOR'] },
+  { label: 'Config. Calendário', href: '/admin/calendario', roles: ['ADMINISTRADOR'] },
 ];
 
 export function Sidebar({ user }: { user: UserMe }) {
