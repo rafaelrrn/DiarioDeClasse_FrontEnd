@@ -21,6 +21,7 @@ const navItems: NavItem[] = [
   { label: 'Pessoas', href: '/pessoas', roles: ['ADMINISTRADOR', 'COORDENADOR', 'DIRETOR'] },
   { label: 'Alunos', href: '/alunos' },
   { label: 'Avaliações', href: '/avaliacoes', roles: ['ADMINISTRADOR', 'COORDENADOR', 'PROFESSOR'] },
+  { label: 'Frequências', href: '/frequencias', roles: ['ADMINISTRADOR', 'COORDENADOR'] },
   { label: 'Calendário', href: '/calendario', roles: ['ADMINISTRADOR', 'COORDENADOR', 'PROFESSOR'] },
   { label: 'Usuários', href: '/admin/usuarios', roles: ['ADMINISTRADOR'] },
   { label: 'Instituição', href: '/admin/instituicao', roles: ['ADMINISTRADOR', 'COORDENADOR'] },
