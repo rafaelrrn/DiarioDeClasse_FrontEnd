@@ -18,12 +18,14 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { label: 'Turmas', href: '/turmas', roles: ['ADMINISTRADOR', 'DIRETOR', 'COORDENADOR', 'PROFESSOR'] },
+  { label: 'Pessoas', href: '/pessoas', roles: ['ADMINISTRADOR', 'COORDENADOR', 'DIRETOR'] },
   { label: 'Alunos', href: '/alunos' },
   { label: 'Avaliações', href: '/avaliacoes', roles: ['ADMINISTRADOR', 'COORDENADOR', 'PROFESSOR'] },
   { label: 'Calendário', href: '/calendario', roles: ['ADMINISTRADOR', 'COORDENADOR', 'PROFESSOR'] },
   { label: 'Usuários', href: '/admin/usuarios', roles: ['ADMINISTRADOR'] },
   { label: 'Instituição', href: '/admin/instituicao', roles: ['ADMINISTRADOR', 'COORDENADOR'] },
   { label: 'Config. Turma', href: '/admin/turma', roles: ['ADMINISTRADOR'] },
+  { label: 'Config. Pessoa', href: '/admin/pessoa', roles: ['ADMINISTRADOR'] },
 ];
 
 export function Sidebar({ user }: { user: UserMe }) {
