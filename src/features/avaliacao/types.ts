@@ -1,3 +1,5 @@
+import type { FrequenciaResumoDTO } from '@/features/frequencia/types';
+
 export type SituacaoAluno =
   | 'APROVADO'
   | 'EM_RECUPERACAO'
@@ -7,15 +9,15 @@ export type SituacaoAluno =
 export interface AvaliacaoDTO {
   idAvaliacao?: number;
   idDisciplina: number;
-  idCalendarioEscolar: number;
+  idCalendarioEscolar?: number | null;
   materia?: string;
-  dia?: string;
-  peso?: number;
+  dia?: string;    // "YYYY-MM-DD"
+  peso?: number | null;
 }
 
 export interface NotaLancamentoDTO {
   idAluno: number;
-  nota: number;
+  nota: number;    // 0.0 a 10.0
   obs?: string;
 }
 
@@ -23,7 +25,7 @@ export interface AlunoAvaliacaoDTO {
   idAlunoAvaliacao?: number;
   idAluno: number;
   idAvaliacao: number;
-  nota: number;
+  nota?: number;
   obs?: string;
 }
 
@@ -37,14 +39,6 @@ export interface MediaDisciplinaDTO {
 export interface BoletimResponseDTO {
   idAluno: number;
   nomeAluno: string;
-  frequencia: {
-    idAluno: number;
-    totalAulas: number;
-    totalPresencas: number;
-    totalFaltas: number;
-    totalFaltasJust: number;
-    percentualPresenca: number;
-    emRiscoReprovacao: boolean;
-  };
+  frequencia: FrequenciaResumoDTO;
   disciplinas: MediaDisciplinaDTO[];
 }
