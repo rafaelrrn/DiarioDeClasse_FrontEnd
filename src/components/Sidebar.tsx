@@ -1,10 +1,21 @@
 'use client';
+import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { logout } from '@/features/auth/authService';
 import { useAuthStore } from '@/features/auth/useAuthStore';
 import type { UserMe } from '@/features/auth/types';
@@ -33,7 +44,8 @@ const navItems: NavItem[] = [
 export function Sidebar({ user }: { user: UserMe }) {
   const pathname = usePathname();
   const router = useRouter();
-  const setUser = useAuthStore((s) => s.setUser);
+  const clear = useAuthStore((s) => s.clear);
+  const [confirmLogout, setConfirmLogout] = useState(false);
 
   const visible = navItems.filter(
     (item) => !item.roles || item.roles.includes(user.role)
@@ -41,7 +53,7 @@ export function Sidebar({ user }: { user: UserMe }) {
 
   async function handleLogout() {
     await logout();
-    setUser(null);
+    clear();
     router.push('/login');
   }
 
@@ -68,7 +80,13 @@ export function Sidebar({ user }: { user: UserMe }) {
 
       <Separator className="my-3" />
 
-      <div className="flex items-center gap-2 px-2 mb-2">
+      <Link
+        href="/perfil"
+        className={cn(
+          'flex items-center gap-2 px-2 mb-2 rounded-md py-1 hover:bg-accent transition-colors',
+          pathname.startsWith('/perfil') && 'bg-accent'
+        )}
+      >
         <Avatar className="h-8 w-8">
           <AvatarFallback>{user.nome.charAt(0).toUpperCase()}</AvatarFallback>
         </Avatar>
@@ -76,11 +94,31 @@ export function Sidebar({ user }: { user: UserMe }) {
           <p className="text-sm font-medium truncate">{user.nome}</p>
           <p className="text-xs text-muted-foreground truncate">{user.role}</p>
         </div>
-      </div>
+      </Link>
 
-      <Button variant="ghost" size="sm" onClick={handleLogout} className="justify-start">
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => setConfirmLogout(true)}
+        className="justify-start"
+      >
         Sair
       </Button>
+
+      <AlertDialog open={confirmLogout} onOpenChange={setConfirmLogout}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar saída?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Você será desconectado e redirecionado para a tela de login.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleLogout}>Sair</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </aside>
   );
 }

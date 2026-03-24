@@ -1,6 +1,9 @@
 'use client';
+import Link from 'next/link';
 import { usePessoas } from '@/features/pessoa/pessoaQueries';
 import { PageHeader } from '@/shared/components/PageHeader';
+import { buttonVariants } from '@/lib/buttonVariants';
+import { cn } from '@/lib/utils';
 import {
   Table,
   TableBody,
@@ -15,7 +18,17 @@ export default function AdminUsuariosPage() {
 
   return (
     <div>
-      <PageHeader title="Gerenciar Usuários" />
+      <PageHeader
+        title="Gerenciar Usuários"
+        action={
+          <Link
+            href="/admin/usuarios/novo"
+            className={cn(buttonVariants({ size: 'sm' }))}
+          >
+            + Novo Usuário
+          </Link>
+        }
+      />
       {isLoading ? (
         <p className="text-muted-foreground">Carregando...</p>
       ) : (
