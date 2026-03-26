@@ -29,7 +29,13 @@ export default function LoginPage() {
   const router = useRouter();
   const setUser = useAuthStore((s) => s.setUser);
 
-  const form = useForm<FormData>({ resolver: zodResolver(schema) });
+  const form = useForm<FormData>({ 
+    resolver: zodResolver(schema), 
+    defaultValues: {
+      email: '',
+      senha: '',
+    }
+  });
 
   async function onSubmit(data: FormData) {
     try {
