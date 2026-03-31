@@ -16,11 +16,21 @@ export interface RegisterPayload {
   email: string;
   senha: string;
   role: Role;
+  idPessoa?: number | null;
+}
+
+export interface UserUpdateRequest {
+  nome: string;
+  email: string;
+  senha?: string;
+  role: Role;
+  idPessoa?: number | null;
 }
 
 export interface UserMe {
-  idUsers: number;
+  idUser: number;
   email: string;
   nome: string;
   role: Role;
+  idPessoa: number | null;
 }

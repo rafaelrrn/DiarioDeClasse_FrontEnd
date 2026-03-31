@@ -5,8 +5,9 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Pencil, Trash2 } from 'lucide-react';
-import { useTurmas, useCriarTurma, useAtualizarTurma, useDeletarTurma } from '@/features/turma/turmaQueries';
+import { useTurmas, useTurmasDoProfessor, useCriarTurma, useAtualizarTurma, useDeletarTurma } from '@/features/turma/turmaQueries';
 import { useRoles } from '@/shared/hooks/useRoles';
+import { useAuthStore } from '@/features/auth/useAuthStore';
 import { PageHeader } from '@/shared/components/PageHeader';
 import { buttonVariants } from '@/lib/buttonVariants';
 import { cn } from '@/lib/utils';
@@ -34,10 +35,15 @@ const schema = z.object({
 type FormData = z.infer<typeof schema>;
 
 export function TurmaListClient() {
-  const { hasAny } = useRoles();
+  const { hasAny, is } = useRoles();
   const podeEscrever = hasAny('ADMINISTRADOR');
+  const isProfessor = is('PROFESSOR');
+  const user = useAuthStore((s) => s.user);
 
-  const { data: turmas = [], isLoading, isError, refetch } = useTurmas();
+  const turmasAdmin = useTurmas(!isProfessor);
+  const turmasProf = useTurmasDoProfessor(isProfessor ? (user?.idPessoa ?? null) : null);
+
+  const { data: turmas = [], isLoading, isError, refetch } = isProfessor ? turmasProf : turmasAdmin;
   const criar = useCriarTurma();
   const atualizar = useAtualizarTurma();
   const deletar = useDeletarTurma();

@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
   listarTurmas,
+  listarTurmasDoProfessor,
   buscarTurma,
   criarTurma,
   atualizarTurma,
@@ -27,8 +28,16 @@ import type { ClasseDTO, ComponenteCurricularDTO, DisciplinaDTO, TurmaDTO } from
 
 // ─── Turma ────────────────────────────────────────────────────────────────────
 
-export function useTurmas() {
-  return useQuery({ queryKey: ['turmas'], queryFn: listarTurmas });
+export function useTurmas(enabled = true) {
+  return useQuery({ queryKey: ['turmas'], queryFn: listarTurmas, enabled });
+}
+
+export function useTurmasDoProfessor(idProfessor: number | null) {
+  return useQuery({
+    queryKey: ['turmas', 'professor', idProfessor],
+    queryFn: () => listarTurmasDoProfessor(idProfessor!),
+    enabled: idProfessor !== null,
+  });
 }
 
 export function useTurma(id: number) {

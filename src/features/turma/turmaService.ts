@@ -191,6 +191,16 @@ export async function deletarClasse(id: number): Promise<void> {
   }
 }
 
+/** Busca turmas vinculadas a um professor via suas Classes. */
+export async function listarTurmasDoProfessor(idProfessor: number): Promise<TurmaDTO[]> {
+  const classes = await listarClasses();
+  const idsUnicos = [...new Set(
+    classes.filter((c) => c.idProfessor === idProfessor).map((c) => c.idTurma)
+  )];
+  const turmas = await Promise.all(idsUnicos.map((id) => buscarTurma(id)));
+  return turmas.filter((t): t is TurmaDTO => t !== null);
+}
+
 // ─── Aliases para compatibilidade com código legado ──────────────────────────
 
 /** @deprecated Use listarTurmas */

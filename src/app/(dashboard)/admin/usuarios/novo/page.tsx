@@ -4,7 +4,10 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
+import { useQueryClient } from '@tanstack/react-query';
 import { register } from '@/features/auth/authService';
+import { userKeys } from '@/features/auth/authQueries';
+import { usePessoas } from '@/features/pessoa/pessoaQueries';
 import { useRoles } from '@/shared/hooks/useRoles';
 import { PageHeader } from '@/shared/components/PageHeader';
 import { Button } from '@/components/ui/button';
@@ -27,30 +30,41 @@ const ROLE_OPTIONS: { value: Role; label: string }[] = [
 
 const schema = z.object({
   nome: z.string().min(1, 'Nome obrigatório'),
-  email: z.string().email('E-mail inválido'),
+  email: z.email('E-mail inválido'),
   senha: z.string().min(6, 'Mínimo 6 caracteres'),
+<<<<<<< Updated upstream
   role: z
     .enum(['ADMINISTRADOR', 'DIRETOR', 'COORDENADOR', 'PROFESSOR', 'RESPONSAVEL', 'ALUNO'])
     .optional()
     .refine((val) => val !== undefined, {
       message: 'Role é obrigatória',
     }),
+=======
+  role: z.enum(['ADMINISTRADOR', 'DIRETOR', 'COORDENADOR', 'PROFESSOR', 'RESPONSAVEL', 'ALUNO']),
+  idPessoa: z.number().optional().nullable(),
+>>>>>>> Stashed changes
 });
 
 type FormData = z.infer<typeof schema>;
 
 export default function NovoUsuarioPage() {
   const router = useRouter();
+  const qc = useQueryClient();
   const { atLeast } = useRoles();
+  const { data: pessoas = [] } = usePessoas();
 
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
+<<<<<<< Updated upstream
     defaultValues: {
       nome: '',
       email: '',
       senha: '',
       role: undefined,
     }
+=======
+    defaultValues: { idPessoa: null },
+>>>>>>> Stashed changes
   });
 
   if (!atLeast('ADMINISTRADOR')) {
@@ -67,14 +81,22 @@ export default function NovoUsuarioPage() {
 
     try {
       await register({
+<<<<<<< Updated upstream
         ...data,
         role: data.role,
+=======
+        nome: data.nome,
+        email: data.email,
+        senha: data.senha,
+        role: data.role as Role,
+        idPessoa: data.idPessoa ?? null,
+>>>>>>> Stashed changes
       });
       toast.success('Usuário registrado com sucesso');
+      qc.invalidateQueries({ queryKey: userKeys.all });
       router.push('/admin/usuarios');
     } catch (error: any) {
-      const msg = error.response?.data?.error ?? 'Erro ao registrar usuário';
-      toast.error(msg);
+      toast.error(error.message ?? 'Erro ao registrar usuário');
     }
   }
 
@@ -135,9 +157,61 @@ export default function NovoUsuarioPage() {
               <SelectField
                 control={form.control}
                 name="role"
+<<<<<<< Updated upstream
                 label="Role"
                 placeholder="Selecione o perfil..."
                 options={ROLE_OPTIONS}
+=======
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Role</FormLabel>
+                    <Select value={field.value ?? ''} onValueChange={(v) => field.onChange(v as Role)}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione o perfil..." />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {ROLE_OPTIONS.map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+>>>>>>> Stashed changes
+              />
+
+              <FormField
+                control={form.control}
+                name="idPessoa"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Vínculo com Pessoa</FormLabel>
+                    <Select
+                      value={field.value ? String(field.value) : ''}
+                      onValueChange={(v) => field.onChange(v ? Number(v) : null)}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="— Sem vínculo —" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="">— Sem vínculo —</SelectItem>
+                        {pessoas.map((p) => (
+                          <SelectItem key={p.idPessoa} value={String(p.idPessoa)}>
+                            {p.nome}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
 
               <div className="flex gap-2 pt-2">
