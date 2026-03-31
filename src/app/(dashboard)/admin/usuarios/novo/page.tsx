@@ -13,10 +13,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Form, FormControl, FormField, FormItem, FormLabel, FormMessage,
 } from '@/components/ui/form';
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from '@/components/ui/select';
 import type { Role } from '@/features/auth/types';
+import { SelectField } from '@/components/form/SelectField';
 
 const ROLE_OPTIONS: { value: Role; label: string }[] = [
   { value: 'ADMINISTRADOR', label: 'Administrador' },
@@ -31,7 +29,12 @@ const schema = z.object({
   nome: z.string().min(1, 'Nome obrigatório'),
   email: z.string().email('E-mail inválido'),
   senha: z.string().min(6, 'Mínimo 6 caracteres'),
-  role: z.enum(['ADMINISTRADOR', 'DIRETOR', 'COORDENADOR', 'PROFESSOR', 'RESPONSAVEL', 'ALUNO']),
+  role: z
+    .enum(['ADMINISTRADOR', 'DIRETOR', 'COORDENADOR', 'PROFESSOR', 'RESPONSAVEL', 'ALUNO'])
+    .optional()
+    .refine((val) => val !== undefined, {
+      message: 'Role é obrigatória',
+    }),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -40,7 +43,15 @@ export default function NovoUsuarioPage() {
   const router = useRouter();
   const { atLeast } = useRoles();
 
-  const form = useForm<FormData>({ resolver: zodResolver(schema) });
+  const form = useForm<FormData>({
+    resolver: zodResolver(schema),
+    defaultValues: {
+      nome: '',
+      email: '',
+      senha: '',
+      role: undefined,
+    }
+  });
 
   if (!atLeast('ADMINISTRADOR')) {
     return (
@@ -52,8 +63,13 @@ export default function NovoUsuarioPage() {
   }
 
   async function onSubmit(data: FormData) {
+    if (!data.role) return;
+
     try {
-      await register(data);
+      await register({
+        ...data,
+        role: data.role,
+      });
       toast.success('Usuário registrado com sucesso');
       router.push('/admin/usuarios');
     } catch (error: any) {
@@ -116,29 +132,12 @@ export default function NovoUsuarioPage() {
                 )}
               />
 
-              <FormField
+              <SelectField
                 control={form.control}
                 name="role"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Role</FormLabel>
-                    <Select value={field.value} onValueChange={(v) => field.onChange(v as Role)}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione o perfil..." />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {ROLE_OPTIONS.map((opt) => (
-                          <SelectItem key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                label="Role"
+                placeholder="Selecione o perfil..."
+                options={ROLE_OPTIONS}
               />
 
               <div className="flex gap-2 pt-2">
