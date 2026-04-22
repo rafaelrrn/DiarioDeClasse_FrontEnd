@@ -12,6 +12,7 @@ import {
   useDeletarPessoa,
   useTiposPessoa,
 } from '@/features/pessoa/pessoaQueries';
+import { SEXO_OPTIONS, SITUACAO_OPTIONS } from '@/features/pessoa/types';
 import { useRoles } from '@/shared/hooks/useRoles';
 import { cn } from '@/lib/utils';
 import { buttonVariants } from '@/lib/buttonVariants';
@@ -39,15 +40,58 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import type { PessoaDTO } from '@/features/pessoa/types';
 
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function formatCpf(cpf?: string): string {
+  if (!cpf || cpf.length !== 11) return '—';
+  return `${cpf.slice(0, 3)}.${cpf.slice(3, 6)}.${cpf.slice(6, 9)}-${cpf.slice(9)}`;
+}
+
+function formatCpfInput(value: string): string {
+  const d = value.replace(/\D/g, '').slice(0, 11);
+  if (d.length <= 3) return d;
+  if (d.length <= 6) return `${d.slice(0, 3)}.${d.slice(3)}`;
+  if (d.length <= 9) return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6)}`;
+  return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}`;
+}
+
+function formatDate(dateStr?: string) {
+  if (!dateStr) return '—';
+  return new Date(dateStr + 'T00:00:00').toLocaleDateString('pt-BR');
+}
+
+const SITUACAO_BADGE: Record<string, string> = {
+  ATIVO:       'bg-green-100 text-green-800',
+  INATIVO:     'bg-gray-100 text-gray-700',
+  TRANSFERIDO: 'bg-blue-100 text-blue-800',
+  EVADIDO:     'bg-yellow-100 text-yellow-800',
+  FORMADO:     'bg-purple-100 text-purple-800',
+};
+
+// ─── Zod schema ───────────────────────────────────────────────────────────────
+
 const schema = z.object({
-  idTipoPessoa: z.number().positive('Selecione o tipo de pessoa'),
+  idTipoPessoa: z.coerce.number().positive('Selecione o tipo de pessoa'),
   nome: z.string().min(1, 'Nome é obrigatório').max(255),
-  sexo: z.string().optional(),
-  dataNascimento: z.string().optional(),
-  situacao: z.string().optional(),
+  cpf: z
+    .string()
+    .length(11, 'CPF deve ter 11 dígitos')
+    .regex(/^\d+$/, 'Apenas números')
+    .optional()
+    .or(z.literal('')),
+  sexo: z.enum(['M', 'F', 'NB', 'NI']).optional(),
+  dataNascimento: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Use o formato YYYY-MM-DD')
+    .optional()
+    .or(z.literal('')),
+  situacao: z.enum(['ATIVO', 'INATIVO', 'TRANSFERIDO', 'EVADIDO', 'FORMADO']).optional(),
+  fotoUrl: z.string().url('URL inválida').max(500).optional().or(z.literal('')),
   obs: z.string().max(255).optional(),
 });
 type FormData = z.infer<typeof schema>;
+
+// ─── Component ────────────────────────────────────────────────────────────────
 
 export function PessoaListClient() {
   const { hasAny, is } = useRoles();
@@ -73,13 +117,24 @@ export function PessoaListClient() {
       form.reset({
         idTipoPessoa: editando.idTipoPessoa,
         nome: editando.nome,
-        sexo: editando.sexo ?? '',
+        cpf: editando.cpf ?? '',
+        sexo: editando.sexo ?? undefined,
         dataNascimento: editando.dataNascimento ?? '',
-        situacao: editando.situacao ?? '',
+        situacao: editando.situacao ?? undefined,
+        fotoUrl: editando.fotoUrl ?? '',
         obs: editando.obs ?? '',
       });
     } else {
-      form.reset({ idTipoPessoa: 0, nome: '', sexo: '', dataNascimento: '', situacao: '', obs: '' });
+      form.reset({
+        idTipoPessoa: 0,
+        nome: '',
+        cpf: '',
+        sexo: undefined,
+        dataNascimento: '',
+        situacao: undefined,
+        fotoUrl: '',
+        obs: '',
+      });
     }
   }, [editando, dialogOpen]);
 
@@ -87,9 +142,11 @@ export function PessoaListClient() {
     const dto: Omit<PessoaDTO, 'idPessoa'> = {
       idTipoPessoa: data.idTipoPessoa,
       nome: data.nome,
+      cpf: data.cpf || undefined,
       sexo: data.sexo || undefined,
       dataNascimento: data.dataNascimento || undefined,
       situacao: data.situacao || undefined,
+      fotoUrl: data.fotoUrl || undefined,
       obs: data.obs || undefined,
     };
     if (editando?.idPessoa) {
@@ -103,10 +160,8 @@ export function PessoaListClient() {
     return tipos.find((t) => t.idTipoPessoa === idTipoPessoa)?.nome ?? String(idTipoPessoa);
   }
 
-  function formatDate(dateStr?: string) {
-    if (!dateStr) return '—';
-    const [year, month, day] = dateStr.split('-');
-    return `${day}/${month}/${year}`;
+  function labelSituacao(s?: string) {
+    return SITUACAO_OPTIONS.find((o) => o.value === s)?.label ?? s ?? '—';
   }
 
   const pessoasFiltradas = filtroTipo
@@ -162,10 +217,9 @@ export function PessoaListClient() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-16">ID</TableHead>
               <TableHead>Nome</TableHead>
+              <TableHead>CPF</TableHead>
               <TableHead>Tipo</TableHead>
-              <TableHead>Nascimento</TableHead>
               <TableHead>Situação</TableHead>
               <TableHead className="w-32">Ações</TableHead>
             </TableRow>
@@ -173,22 +227,26 @@ export function PessoaListClient() {
           <TableBody>
             {pessoasFiltradas.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
                   Nenhuma pessoa encontrada.
                 </TableCell>
               </TableRow>
             ) : (
               pessoasFiltradas.map((p) => (
                 <TableRow key={p.idPessoa}>
-                  <TableCell>{p.idPessoa}</TableCell>
                   <TableCell className="font-medium">{p.nome}</TableCell>
+                  <TableCell className="font-mono text-sm">{formatCpf(p.cpf)}</TableCell>
                   <TableCell>{nomeTipo(p.idTipoPessoa)}</TableCell>
-                  <TableCell>{formatDate(p.dataNascimento)}</TableCell>
                   <TableCell>
                     {p.situacao ? (
-                      <Badge variant={p.situacao === 'Ativo' ? 'default' : 'secondary'}>
-                        {p.situacao}
-                      </Badge>
+                      <span
+                        className={cn(
+                          'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium',
+                          SITUACAO_BADGE[p.situacao] ?? 'bg-gray-100 text-gray-700'
+                        )}
+                      >
+                        {labelSituacao(p.situacao)}
+                      </span>
                     ) : (
                       <span className="text-muted-foreground text-sm">—</span>
                     )}
@@ -235,6 +293,8 @@ export function PessoaListClient() {
           </DialogHeader>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+
+              {/* Tipo de Pessoa */}
               <FormField control={form.control} name="idTipoPessoa" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Tipo de Pessoa</FormLabel>
@@ -257,6 +317,7 @@ export function PessoaListClient() {
                 </FormItem>
               )} />
 
+              {/* Nome */}
               <FormField control={form.control} name="nome" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Nome</FormLabel>
@@ -265,36 +326,64 @@ export function PessoaListClient() {
                 </FormItem>
               )} />
 
+              {/* CPF */}
+              <FormField control={form.control} name="cpf" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>CPF <span className="text-muted-foreground text-xs">(opcional)</span></FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="000.000.000-00"
+                      value={formatCpfInput(field.value ?? '')}
+                      onChange={(e) => {
+                        const raw = e.target.value.replace(/\D/g, '').slice(0, 11);
+                        field.onChange(raw);
+                      }}
+                      maxLength={14}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+
               <div className="grid grid-cols-2 gap-3">
+                {/* Sexo */}
                 <FormField control={form.control} name="sexo" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Sexo</FormLabel>
-                    <Select value={field.value ?? ''} onValueChange={field.onChange}>
+                    <Select
+                      value={field.value ?? ''}
+                      onValueChange={(v) => field.onChange(v || undefined)}
+                    >
                       <FormControl>
                         <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="">Não informado</SelectItem>
-                        <SelectItem value="Masculino">Masculino</SelectItem>
-                        <SelectItem value="Feminino">Feminino</SelectItem>
-                        <SelectItem value="Outro">Outro</SelectItem>
+                        <SelectItem value="">—</SelectItem>
+                        {SEXO_OPTIONS.map((o) => (
+                          <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />
                   </FormItem>
                 )} />
 
+                {/* Situação */}
                 <FormField control={form.control} name="situacao" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Situação</FormLabel>
-                    <Select value={field.value ?? ''} onValueChange={field.onChange}>
+                    <Select
+                      value={field.value ?? ''}
+                      onValueChange={(v) => field.onChange(v || undefined)}
+                    >
                       <FormControl>
                         <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="">Não informada</SelectItem>
-                        <SelectItem value="Ativo">Ativo</SelectItem>
-                        <SelectItem value="Inativo">Inativo</SelectItem>
+                        <SelectItem value="">—</SelectItem>
+                        {SITUACAO_OPTIONS.map((o) => (
+                          <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -302,6 +391,7 @@ export function PessoaListClient() {
                 )} />
               </div>
 
+              {/* Data de Nascimento */}
               <FormField control={form.control} name="dataNascimento" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Data de Nascimento</FormLabel>
@@ -312,6 +402,18 @@ export function PessoaListClient() {
                 </FormItem>
               )} />
 
+              {/* Foto URL */}
+              <FormField control={form.control} name="fotoUrl" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Foto (URL) <span className="text-muted-foreground text-xs">(opcional)</span></FormLabel>
+                  <FormControl>
+                    <Input placeholder="https://exemplo.com/foto.jpg" maxLength={500} {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+
+              {/* Observação */}
               <FormField control={form.control} name="obs" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Observação</FormLabel>
@@ -337,7 +439,9 @@ export function PessoaListClient() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir pessoa?</AlertDialogTitle>
-            <AlertDialogDescription>Esta ação não pode ser desfeita.</AlertDialogDescription>
+            <AlertDialogDescription>
+              Esta ação não pode ser desfeita. Todos os vínculos (contatos, endereços, perfil) serão removidos.
+            </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>

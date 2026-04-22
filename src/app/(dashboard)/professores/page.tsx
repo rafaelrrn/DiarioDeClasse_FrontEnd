@@ -10,14 +10,13 @@ import {
   usePessoas,
   useDeletarPessoa,
   useTiposPessoa,
-  useAlunosPerfil,
+  useProfessoresPerfil,
 } from '@/features/pessoa/pessoaQueries';
 import {
   criarPessoa,
   atualizarPessoa,
-  criarAlunoPerfil,
-  atualizarAlunoPerfil,
-  buscarAlunoPerfilPorPessoa,
+  criarProfessorPerfil,
+  atualizarProfessorPerfil,
 } from '@/features/pessoa/pessoaService';
 import { SEXO_OPTIONS, SITUACAO_OPTIONS } from '@/features/pessoa/types';
 import { useRoles } from '@/shared/hooks/useRoles';
@@ -27,7 +26,6 @@ import { useQueryClient } from '@tanstack/react-query';
 import { PageHeader } from '@/shared/components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -47,7 +45,7 @@ import {
 } from '@/components/ui/form';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
-import type { PessoaDTO, AlunoPerfilDTO } from '@/features/pessoa/types';
+import type { PessoaDTO, ProfessorPerfilDTO } from '@/features/pessoa/types';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -77,7 +75,7 @@ const SITUACAO_BADGE: Record<string, string> = {
   FORMADO:     'bg-purple-100 text-purple-800',
 };
 
-// ─── Schema combinado Pessoa + AlunoPerfil ────────────────────────────────────
+// ─── Schema combinado Pessoa + ProfessorPerfil ────────────────────────────────
 
 const schema = z.object({
   // — Dados pessoais —
@@ -96,21 +94,17 @@ const schema = z.object({
     .or(z.literal('')),
   situacao: z.enum(['ATIVO', 'INATIVO', 'TRANSFERIDO', 'EVADIDO', 'FORMADO']).optional(),
   obs: z.string().max(255).optional(),
-  // — Perfil de aluno —
-  matricula: z.string().min(1, 'Matrícula é obrigatória').max(30),
-  dataMatricula: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Data de matrícula inválida'),
-  necessidadeEspecial: z.enum(['true', 'false']).default('false'),
-  descricaoNee: z.string().optional(),
-}).refine(
-  (d) => d.necessidadeEspecial !== 'true' || !!d.descricaoNee?.trim(),
-  { message: 'Descreva a necessidade especial', path: ['descricaoNee'] }
-);
+  // — Perfil de professor —
+  registroMec: z.string().max(30).optional(),
+  formacao: z.string().max(200).optional(),
+  dataAdmissao: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Data de admissão inválida'),
+});
 
 type FormData = z.infer<typeof schema>;
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export default function AlunosPage() {
+export default function ProfessoresPage() {
   const { hasAny, is } = useRoles();
   const podeEscrever = hasAny('ADMINISTRADOR', 'COORDENADOR');
   const podeExcluir = is('ADMINISTRADOR');
@@ -118,31 +112,30 @@ export default function AlunosPage() {
 
   const { data: todasPessoas = [], isLoading: loadingPessoas } = usePessoas();
   const { data: tipos = [] } = useTiposPessoa();
-  const { data: todosPerfis = [], isLoading: loadingPerfis } = useAlunosPerfil();
+  const { data: todosPerfis = [], isLoading: loadingPerfis } = useProfessoresPerfil();
   const deletarPessoa = useDeletarPessoa();
 
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editando, setEditando] = useState<{ pessoa: PessoaDTO; perfil: AlunoPerfilDTO | null } | null>(null);
+  const [editando, setEditando] = useState<{ pessoa: PessoaDTO; perfil: ProfessorPerfilDTO | null } | null>(null);
   const [deletandoId, setDeletandoId] = useState<number | null>(null);
   const [salvando, setSalvando] = useState(false);
 
-  // Descobrir o ID do tipo "Aluno"
-  const tipoAluno = tipos.find((t) => t.nome.toLowerCase().includes('aluno'));
+  // Descobrir o ID do tipo "Professor"
+  const tipoProfessor = tipos.find((t) => t.nome.toLowerCase().includes('professor'));
 
-  // Filtrar apenas alunos
-  const alunos = tipoAluno
-    ? todasPessoas.filter((p) => p.idTipoPessoa === tipoAluno.idTipoPessoa)
+  // Filtrar apenas professores
+  const professores = tipoProfessor
+    ? todasPessoas.filter((p) => p.idTipoPessoa === tipoProfessor.idTipoPessoa)
     : [];
 
   // Join com perfis
-  function perfilDoAluno(idPessoa: number): AlunoPerfilDTO | undefined {
+  function perfilDoProfessor(idPessoa: number): ProfessorPerfilDTO | undefined {
     return todosPerfis.find((p) => p.idPessoa === idPessoa);
   }
 
   const isLoading = loadingPessoas || loadingPerfis;
 
   const form = useForm<FormData>({ resolver: zodResolver(schema) });
-  const watchNee = form.watch('necessidadeEspecial');
 
   useEffect(() => {
     if (!dialogOpen) return;
@@ -155,28 +148,27 @@ export default function AlunosPage() {
         dataNascimento: pessoa.dataNascimento ?? '',
         situacao: pessoa.situacao ?? undefined,
         obs: pessoa.obs ?? '',
-        matricula: perfil?.matricula ?? '',
-        dataMatricula: perfil?.dataMatricula ?? '',
-        necessidadeEspecial: perfil?.necessidadeEspecial ? 'true' : 'false',
-        descricaoNee: perfil?.descricaoNee ?? '',
+        registroMec: perfil?.registroMec ?? '',
+        formacao: perfil?.formacao ?? '',
+        dataAdmissao: perfil?.dataAdmissao ?? '',
       });
     } else {
       form.reset({
         nome: '', cpf: '', sexo: undefined, dataNascimento: '', situacao: undefined, obs: '',
-        matricula: '', dataMatricula: '', necessidadeEspecial: 'false', descricaoNee: '',
+        registroMec: '', formacao: '', dataAdmissao: '',
       });
     }
   }, [dialogOpen, editando]);
 
   async function onSubmit(data: FormData) {
-    if (!tipoAluno) {
-      toast.error('Tipo "Aluno" não encontrado. Cadastre-o em Config. Pessoa primeiro.');
+    if (!tipoProfessor) {
+      toast.error('Tipo "Professor" não encontrado. Cadastre-o em Config. Pessoa primeiro.');
       return;
     }
     setSalvando(true);
     try {
       const pessoaDto: Omit<PessoaDTO, 'idPessoa'> = {
-        idTipoPessoa: tipoAluno.idTipoPessoa!,
+        idTipoPessoa: tipoProfessor.idTipoPessoa!,
         nome: data.nome,
         cpf: data.cpf || undefined,
         sexo: data.sexo,
@@ -186,43 +178,40 @@ export default function AlunosPage() {
       };
 
       const perfilDto = {
-        matricula: data.matricula,
-        dataMatricula: data.dataMatricula,
-        necessidadeEspecial: data.necessidadeEspecial === 'true',
-        descricaoNee: data.necessidadeEspecial === 'true' ? data.descricaoNee : undefined,
+        registroMec: data.registroMec || undefined,
+        formacao: data.formacao || undefined,
+        dataAdmissao: data.dataAdmissao,
       };
 
       if (editando) {
-        // — Editar —
         const idPessoa = editando.pessoa.idPessoa!;
         await atualizarPessoa(idPessoa, pessoaDto);
 
         if (editando.perfil) {
-          await atualizarAlunoPerfil(editando.perfil.idAlunoPerfil!, perfilDto);
+          await atualizarProfessorPerfil(editando.perfil.idProfessorPerfil!, perfilDto);
         } else {
-          await criarAlunoPerfil({ idPessoa, ...perfilDto });
+          await criarProfessorPerfil({ idPessoa, ...perfilDto });
         }
-        toast.success('Aluno atualizado com sucesso');
+        toast.success('Professor atualizado com sucesso');
       } else {
-        // — Criar —
         const novaPessoa = await criarPessoa(pessoaDto);
-        await criarAlunoPerfil({ idPessoa: novaPessoa.idPessoa!, ...perfilDto });
-        toast.success('Aluno cadastrado com sucesso');
+        await criarProfessorPerfil({ idPessoa: novaPessoa.idPessoa!, ...perfilDto });
+        toast.success('Professor cadastrado com sucesso');
       }
 
       await qc.invalidateQueries({ queryKey: ['pessoas'] });
-      await qc.invalidateQueries({ queryKey: ['aluno-perfil'] });
-      await qc.invalidateQueries({ queryKey: ['aluno-perfil', 'pessoa'] });
+      await qc.invalidateQueries({ queryKey: ['professor-perfil'] });
+      await qc.invalidateQueries({ queryKey: ['professor-perfil', 'pessoa'] });
       setDialogOpen(false);
     } catch (e: any) {
-      toast.error(e?.message ?? 'Erro ao salvar aluno');
+      toast.error(e?.message ?? 'Erro ao salvar professor');
     } finally {
       setSalvando(false);
     }
   }
 
   function abrirEditar(pessoa: PessoaDTO) {
-    const perfil = perfilDoAluno(pessoa.idPessoa!) ?? null;
+    const perfil = perfilDoProfessor(pessoa.idPessoa!) ?? null;
     setEditando({ pessoa, perfil });
     setDialogOpen(true);
   }
@@ -235,10 +224,10 @@ export default function AlunosPage() {
   return (
     <div>
       <PageHeader
-        title="Alunos"
+        title="Professores"
         action={
           podeEscrever ? (
-            <Button size="sm" onClick={abrirNovo}>+ Novo Aluno</Button>
+            <Button size="sm" onClick={abrirNovo}>+ Novo Professor</Button>
           ) : undefined
         }
       />
@@ -255,29 +244,31 @@ export default function AlunosPage() {
             <TableRow>
               <TableHead>Nome</TableHead>
               <TableHead>CPF</TableHead>
-              <TableHead>Matrícula</TableHead>
+              <TableHead>Registro MEC</TableHead>
+              <TableHead>Admissão</TableHead>
               <TableHead>Situação</TableHead>
               <TableHead className="w-36">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {alunos.length === 0 ? (
+            {professores.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                  {tipoAluno
-                    ? 'Nenhum aluno cadastrado.'
-                    : 'Tipo "Aluno" não encontrado. Cadastre-o em Config. Pessoa.'}
+                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                  {tipoProfessor
+                    ? 'Nenhum professor cadastrado.'
+                    : 'Tipo "Professor" não encontrado. Cadastre-o em Config. Pessoa.'}
                 </TableCell>
               </TableRow>
             ) : (
-              alunos.map((p) => {
-                const perfil = perfilDoAluno(p.idPessoa!);
+              professores.map((p) => {
+                const perfil = perfilDoProfessor(p.idPessoa!);
                 const labelSit = SITUACAO_OPTIONS.find((o) => o.value === p.situacao)?.label;
                 return (
                   <TableRow key={p.idPessoa}>
                     <TableCell className="font-medium">{p.nome}</TableCell>
                     <TableCell className="font-mono text-sm">{formatCpf(p.cpf)}</TableCell>
-                    <TableCell>{perfil?.matricula ?? '—'}</TableCell>
+                    <TableCell>{perfil?.registroMec ?? '—'}</TableCell>
+                    <TableCell>{formatDate(perfil?.dataAdmissao)}</TableCell>
                     <TableCell>
                       {p.situacao ? (
                         <span className={cn(
@@ -292,9 +283,9 @@ export default function AlunosPage() {
                     </TableCell>
                     <TableCell className="flex gap-1">
                       <Link
-                        href={`/alunos/${p.idPessoa}`}
+                        href={`/pessoas/${p.idPessoa}`}
                         className={cn(buttonVariants({ variant: 'ghost', size: 'icon' }))}
-                        title="Ver perfil"
+                        title="Ver detalhe completo"
                       >
                         <Eye className="h-4 w-4" />
                       </Link>
@@ -321,7 +312,7 @@ export default function AlunosPage() {
       <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) setEditando(null); }}>
         <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editando ? 'Editar Aluno' : 'Novo Aluno'}</DialogTitle>
+            <DialogTitle>{editando ? 'Editar Professor' : 'Novo Professor'}</DialogTitle>
           </DialogHeader>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -334,7 +325,7 @@ export default function AlunosPage() {
               <FormField control={form.control} name="nome" render={({ field }) => (
                 <FormItem>
                   <FormLabel>Nome completo</FormLabel>
-                  <FormControl><Input placeholder="Nome do aluno" {...field} /></FormControl>
+                  <FormControl><Input placeholder="Nome do professor" {...field} /></FormControl>
                   <FormMessage />
                 </FormItem>
               )} />
@@ -380,23 +371,21 @@ export default function AlunosPage() {
                 )} />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <FormField control={form.control} name="situacao" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Situação</FormLabel>
-                    <Select value={field.value ?? ''} onValueChange={(v) => field.onChange(v || undefined)}>
-                      <FormControl><SelectTrigger><SelectValue placeholder="—" /></SelectTrigger></FormControl>
-                      <SelectContent>
-                        <SelectItem value="">—</SelectItem>
-                        {SITUACAO_OPTIONS.map((o) => (
-                          <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-              </div>
+              <FormField control={form.control} name="situacao" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Situação</FormLabel>
+                  <Select value={field.value ?? ''} onValueChange={(v) => field.onChange(v || undefined)}>
+                    <FormControl><SelectTrigger><SelectValue placeholder="—" /></SelectTrigger></FormControl>
+                    <SelectContent>
+                      <SelectItem value="">—</SelectItem>
+                      {SITUACAO_OPTIONS.map((o) => (
+                        <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )} />
 
               <FormField control={form.control} name="obs" render={({ field }) => (
                 <FormItem>
@@ -408,52 +397,34 @@ export default function AlunosPage() {
 
               <Separator />
 
-              {/* ── Dados de Matrícula ── */}
+              {/* ── Dados Profissionais ── */}
               <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                Matrícula
+                Dados Profissionais
               </p>
 
-              <div className="grid grid-cols-2 gap-3">
-                <FormField control={form.control} name="matricula" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Número de matrícula</FormLabel>
-                    <FormControl><Input placeholder="Ex: 2024001" maxLength={30} {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-
-                <FormField control={form.control} name="dataMatricula" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Data de matrícula</FormLabel>
-                    <FormControl><Input type="date" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-              </div>
-
-              <FormField control={form.control} name="necessidadeEspecial" render={({ field }) => (
+              <FormField control={form.control} name="dataAdmissao" render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Necessidade Especial (NEE)</FormLabel>
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                    <SelectContent>
-                      <SelectItem value="false">Não</SelectItem>
-                      <SelectItem value="true">Sim</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <FormLabel>Data de admissão</FormLabel>
+                  <FormControl><Input type="date" {...field} /></FormControl>
                   <FormMessage />
                 </FormItem>
               )} />
 
-              {watchNee === 'true' && (
-                <FormField control={form.control} name="descricaoNee" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Descrição da necessidade especial</FormLabel>
-                    <FormControl><Input placeholder="Descreva a necessidade" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-              )}
+              <FormField control={form.control} name="registroMec" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Registro MEC <span className="text-muted-foreground text-xs">(opcional)</span></FormLabel>
+                  <FormControl><Input placeholder="Ex: MEC123456" maxLength={30} {...field} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+
+              <FormField control={form.control} name="formacao" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Formação <span className="text-muted-foreground text-xs">(opcional)</span></FormLabel>
+                  <FormControl><Input placeholder="Ex: Licenciatura em Matemática" maxLength={200} {...field} /></FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
 
               <DialogFooter>
                 <Button type="submit" disabled={salvando}>
@@ -469,9 +440,9 @@ export default function AlunosPage() {
       <AlertDialog open={deletandoId !== null} onOpenChange={(open) => { if (!open) setDeletandoId(null); }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Excluir aluno?</AlertDialogTitle>
+            <AlertDialogTitle>Excluir professor?</AlertDialogTitle>
             <AlertDialogDescription>
-              O cadastro da pessoa e o perfil de aluno serão removidos permanentemente.
+              O cadastro da pessoa e o perfil de professor serão removidos permanentemente.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

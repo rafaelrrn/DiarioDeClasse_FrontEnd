@@ -1,12 +1,14 @@
 import api from '@/shared/api/axiosInstance';
 import type { ApiResponse } from '@/shared/api/types';
 import type {
+  AlunoPerfilDTO,
   ContatoDTO,
   ContatoPessoaDTO,
   EnderecoDTO,
   EnderecoPessoaDTO,
   PessoaDTO,
   PessoaResponsavelDTO,
+  ProfessorPerfilDTO,
   TipoPessoaDTO,
 } from './types';
 
@@ -92,6 +94,114 @@ export async function deletarTipoPessoa(id: number): Promise<void> {
     await api.delete(`/v1/tipos-pessoa/${id}`);
   } catch (error) {
     extractError(error, 'Erro ao excluir tipo de pessoa');
+  }
+}
+
+// ─── AlunoPerfil ──────────────────────────────────────────────────────────────
+
+export async function listarAlunosPerfil(): Promise<AlunoPerfilDTO[]> {
+  const res = await api.get<ApiResponse<AlunoPerfilDTO[]>>('/v1/aluno-perfil');
+  return res.data.data ?? [];
+}
+
+export async function buscarAlunoPerfil(id: number): Promise<AlunoPerfilDTO> {
+  const res = await api.get<ApiResponse<AlunoPerfilDTO>>(`/v1/aluno-perfil/${id}`);
+  return res.data.data!;
+}
+
+/** Retorna null quando a Pessoa ainda não tem perfil de aluno (404 esperado) */
+export async function buscarAlunoPerfilPorPessoa(idPessoa: number): Promise<AlunoPerfilDTO | null> {
+  try {
+    const res = await api.get<ApiResponse<AlunoPerfilDTO>>(`/v1/aluno-perfil/pessoa/${idPessoa}`);
+    return res.data.data ?? null;
+  } catch (error: any) {
+    if (error?.response?.status === 404) return null;
+    throw error;
+  }
+}
+
+export async function criarAlunoPerfil(
+  dto: Omit<AlunoPerfilDTO, 'idAlunoPerfil'>
+): Promise<AlunoPerfilDTO> {
+  try {
+    const res = await api.post<ApiResponse<AlunoPerfilDTO>>('/v1/aluno-perfil', dto);
+    return res.data.data!;
+  } catch (error) {
+    extractError(error, 'Erro ao criar perfil de aluno');
+  }
+}
+
+export async function atualizarAlunoPerfil(
+  id: number,
+  dto: Omit<AlunoPerfilDTO, 'idAlunoPerfil' | 'idPessoa'>
+): Promise<AlunoPerfilDTO> {
+  try {
+    const res = await api.put<ApiResponse<AlunoPerfilDTO>>(`/v1/aluno-perfil/${id}`, dto);
+    return res.data.data!;
+  } catch (error) {
+    extractError(error, 'Erro ao atualizar perfil de aluno');
+  }
+}
+
+export async function deletarAlunoPerfil(id: number): Promise<void> {
+  try {
+    await api.delete(`/v1/aluno-perfil/${id}`);
+  } catch (error) {
+    extractError(error, 'Erro ao excluir perfil de aluno');
+  }
+}
+
+// ─── ProfessorPerfil ──────────────────────────────────────────────────────────
+
+export async function listarProfessoresPerfil(): Promise<ProfessorPerfilDTO[]> {
+  const res = await api.get<ApiResponse<ProfessorPerfilDTO[]>>('/v1/professor-perfil');
+  return res.data.data ?? [];
+}
+
+export async function buscarProfessorPerfil(id: number): Promise<ProfessorPerfilDTO> {
+  const res = await api.get<ApiResponse<ProfessorPerfilDTO>>(`/v1/professor-perfil/${id}`);
+  return res.data.data!;
+}
+
+/** Retorna null quando a Pessoa ainda não tem perfil de professor (404 esperado) */
+export async function buscarProfessorPerfilPorPessoa(idPessoa: number): Promise<ProfessorPerfilDTO | null> {
+  try {
+    const res = await api.get<ApiResponse<ProfessorPerfilDTO>>(`/v1/professor-perfil/pessoa/${idPessoa}`);
+    return res.data.data ?? null;
+  } catch (error: any) {
+    if (error?.response?.status === 404) return null;
+    throw error;
+  }
+}
+
+export async function criarProfessorPerfil(
+  dto: Omit<ProfessorPerfilDTO, 'idProfessorPerfil'>
+): Promise<ProfessorPerfilDTO> {
+  try {
+    const res = await api.post<ApiResponse<ProfessorPerfilDTO>>('/v1/professor-perfil', dto);
+    return res.data.data!;
+  } catch (error) {
+    extractError(error, 'Erro ao criar perfil de professor');
+  }
+}
+
+export async function atualizarProfessorPerfil(
+  id: number,
+  dto: Omit<ProfessorPerfilDTO, 'idProfessorPerfil' | 'idPessoa'>
+): Promise<ProfessorPerfilDTO> {
+  try {
+    const res = await api.put<ApiResponse<ProfessorPerfilDTO>>(`/v1/professor-perfil/${id}`, dto);
+    return res.data.data!;
+  } catch (error) {
+    extractError(error, 'Erro ao atualizar perfil de professor');
+  }
+}
+
+export async function deletarProfessorPerfil(id: number): Promise<void> {
+  try {
+    await api.delete(`/v1/professor-perfil/${id}`);
+  } catch (error) {
+    extractError(error, 'Erro ao excluir perfil de professor');
   }
 }
 

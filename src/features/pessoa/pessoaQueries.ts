@@ -11,6 +11,16 @@ import {
   criarTipoPessoa,
   atualizarTipoPessoa,
   deletarTipoPessoa,
+  listarAlunosPerfil,
+  buscarAlunoPerfilPorPessoa,
+  criarAlunoPerfil,
+  atualizarAlunoPerfil,
+  deletarAlunoPerfil,
+  listarProfessoresPerfil,
+  buscarProfessorPerfilPorPessoa,
+  criarProfessorPerfil,
+  atualizarProfessorPerfil,
+  deletarProfessorPerfil,
   listarContatos,
   criarContato,
   atualizarContato,
@@ -33,9 +43,11 @@ import {
   desvincularResponsavel,
 } from './pessoaService';
 import type {
+  AlunoPerfilDTO,
   ContatoDTO,
   EnderecoDTO,
   PessoaDTO,
+  ProfessorPerfilDTO,
   TipoPessoaDTO,
 } from './types';
 
@@ -124,6 +136,110 @@ export function useDeletarTipoPessoa() {
     onSuccess: () => {
       toast.success('Tipo de pessoa excluído');
       qc.invalidateQueries({ queryKey: ['tipos-pessoa'] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+}
+
+// ─── AlunoPerfil ──────────────────────────────────────────────────────────────
+
+export function useAlunosPerfil() {
+  return useQuery({ queryKey: ['aluno-perfil'], queryFn: listarAlunosPerfil });
+}
+
+export function useProfessoresPerfil() {
+  return useQuery({ queryKey: ['professor-perfil'], queryFn: listarProfessoresPerfil });
+}
+
+/** data === null → Pessoa ainda não tem perfil de aluno (404 é estado válido) */
+export function useAlunoPerfilPorPessoa(idPessoa: number) {
+  return useQuery({
+    queryKey: ['aluno-perfil', 'pessoa', idPessoa],
+    queryFn: () => buscarAlunoPerfilPorPessoa(idPessoa),
+    retry: false,
+  });
+}
+
+export function useCriarAlunoPerfil(idPessoa: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (dto: Omit<AlunoPerfilDTO, 'idAlunoPerfil'>) => criarAlunoPerfil(dto),
+    onSuccess: () => {
+      toast.success('Perfil de aluno criado com sucesso');
+      qc.invalidateQueries({ queryKey: ['aluno-perfil', 'pessoa', idPessoa] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+}
+
+export function useAtualizarAlunoPerfil(id: number, idPessoa: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (dto: Omit<AlunoPerfilDTO, 'idAlunoPerfil' | 'idPessoa'>) =>
+      atualizarAlunoPerfil(id, dto),
+    onSuccess: () => {
+      toast.success('Perfil de aluno atualizado');
+      qc.invalidateQueries({ queryKey: ['aluno-perfil', 'pessoa', idPessoa] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+}
+
+export function useDeletarAlunoPerfil(idPessoa: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => deletarAlunoPerfil(id),
+    onSuccess: () => {
+      toast.success('Perfil de aluno excluído');
+      qc.invalidateQueries({ queryKey: ['aluno-perfil', 'pessoa', idPessoa] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+}
+
+// ─── ProfessorPerfil ──────────────────────────────────────────────────────────
+
+/** data === null → Pessoa ainda não tem perfil de professor (404 é estado válido) */
+export function useProfessorPerfilPorPessoa(idPessoa: number) {
+  return useQuery({
+    queryKey: ['professor-perfil', 'pessoa', idPessoa],
+    queryFn: () => buscarProfessorPerfilPorPessoa(idPessoa),
+    retry: false,
+  });
+}
+
+export function useCriarProfessorPerfil(idPessoa: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (dto: Omit<ProfessorPerfilDTO, 'idProfessorPerfil'>) => criarProfessorPerfil(dto),
+    onSuccess: () => {
+      toast.success('Perfil de professor criado com sucesso');
+      qc.invalidateQueries({ queryKey: ['professor-perfil', 'pessoa', idPessoa] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+}
+
+export function useAtualizarProfessorPerfil(id: number, idPessoa: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (dto: Omit<ProfessorPerfilDTO, 'idProfessorPerfil' | 'idPessoa'>) =>
+      atualizarProfessorPerfil(id, dto),
+    onSuccess: () => {
+      toast.success('Perfil de professor atualizado');
+      qc.invalidateQueries({ queryKey: ['professor-perfil', 'pessoa', idPessoa] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+}
+
+export function useDeletarProfessorPerfil(idPessoa: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => deletarProfessorPerfil(id),
+    onSuccess: () => {
+      toast.success('Perfil de professor excluído');
+      qc.invalidateQueries({ queryKey: ['professor-perfil', 'pessoa', idPessoa] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
